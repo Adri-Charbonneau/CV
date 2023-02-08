@@ -9,3 +9,6 @@ Utilisation du sytème de composition de documents **LaTeX**.
 
 ### Inspiration :
 Le rendu du CV est basé sur un modèle fourni [ici](https://github.com/liantze/AltaCV). Il est possible de voir les modifications à partir du modèle en observant les différences entre le commit d'ajout des fichiers et la première version du CV transformé.
+
+### Édition
+Le CV est édité sur [Papeeria](https://www.papeeria.com).
