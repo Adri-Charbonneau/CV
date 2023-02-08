@@ -1,5 +1,5 @@
 %%%%%%%%%%%%%%%%%
-% This is altacv.cls (v1.5, 8 May 2021) written by
+% This is altacv.cls (v1.6.5, 3 Nov 2022) written by
 % LianTze Lim (liantze@gmail.com).
 %
 %% It may be distributed and/or modified under the
@@ -15,10 +15,11 @@
 % - https://github.com/akreuzer Added ragged2e option (5 Nov 2018)
 % - https://github.com/stefanogermano Fixed bad boxes and undefined font shape (July 2018)
 % - https://github.com/foohyfooh Fixed blank spaces in \cvevent and bad link in README.md (June 2018)
+% - https://github.com/logological Remove redundant hyperref and typos (Apr 2021)
 
 %%%%%%%%%%%%%%%%
 \NeedsTeXFormat{LaTeX2e}[1995/12/01]
-\ProvidesClass{altacv}[2021/05/08 AltaCV v1.5, yet another alternative class for a resume/curriculum vitae.]
+\ProvidesClass{altacv}[2022/11/03 AltaCV v1.6.5, yet another alternative class for a resume/curriculum vitae.]
 
 %% v1.1: Optionally load academicons
 %% v1.4: Nope, academicons is unnecessary; fontawesome5 has \faOrcid.
@@ -34,15 +35,12 @@
 \DeclareOption{withhyper}{\@withhypertrue}
 \ProcessOptions\relax
 
-\LoadClass{article}
+\LoadClass{extarticle}
 %% v1.3.2 Hopefully this helps make the PDF
 %% file more 'friendly' with copy-paste etc
+\RequirePackage{etoolbox}
 \RequirePackage[a-1b]{pdfx}
-%% v1.3.3 Temporary fix for pdfx and biblatex incompatibility
-%% (Thanks to @badetitou for highlighting this issue)
-%% https://github.com/plk/biblatex/issues/1044
-%% Will be removed when fix is released in biblatex 3.16
-% \catcode30=12
+\RequirePackage{accsupp}
 \RequirePackage[margin=2cm]{geometry}
 \RequirePackage[fixed]{fontawesome5}
 \RequirePackage{ifxetex,ifluatex}
@@ -108,7 +106,7 @@
 \setlist{leftmargin=*,labelsep=0.5em,nosep,itemsep=0.25\baselineskip,after=\vspace{0.25\baselineskip}}
 \setlist[itemize]{label=\itemmarker}
 \RequirePackage{graphicx}
-\RequirePackage{etoolbox}
+\RequirePackage{trimclip}
 \RequirePackage{dashrule}
 \RequirePackage{multirow,tabularx}
 \RequirePackage{changepage}
@@ -138,10 +136,12 @@
 }%
 }
 %% v1.3: Incorporating hyperlinks
-%% v1.3.1: using \unfriendlydetokenize to avoid
-%% breaking unicode
+%% v1.3.1: using \unfriendlydetokenize to avoid breaking unicode
+%% v1.6: Use accsupp so that when copying/pasting the icon from PDF to a text
+%%       file, the icon name is pasted
 \ExplSyntaxOn
 \NewDocumentCommand{\printinfo}{m m o}{%
+  \BeginAccSupp{method=escape,ActualText={#1:~#2}}
   \IfNoValueTF{#3}{%
     \mbox{\textcolor{accent}{\normalfont #1}~\utffriendlydetokenize{#2}\hspace{2em}}%
   }{%
@@ -153,21 +153,37 @@
       \mbox{\textcolor{accent}{\normalfont #1}~{\utffriendlydetokenize{#3#2}}\hspace{2em}}%
      \fi%
   }%
+   \EndAccSupp{}
 }%
 
 %% v1.3: Exploring convenient creation of fields
-\NewDocumentCommand{\NewInfoField}{m m o}{%
-  \IfNoValueF{#3}{\csdef{#1 hyperprefix}{#3}}%
-  \csdef{#1 symbol}{#2}%
-  \csdef{#1}##1{%
-    \if@withhyper
-      \IfNoValueTF {#3}
-        {\printinfo{\csuse{#1 symbol}}{##1}}%
-        {\printinfo{\csuse{#1 symbol}}{##1}[\csuse{#1 hyperprefix}##1]}%
-    \else
-      \printinfo{\csuse{#1 symbol}}{##1}%
-    \fi%
+%% v1.6: Add starred mode to create \printinfo with full URL
+\NewDocumentCommand{\NewInfoField}{s m m o}{%
+  \IfBooleanF{#1}{
+    \IfNoValueF{#4}{\csdef{#2 hyperprefix}{#4}}%
   }
+  \csdef{#2 symbol}{#3}%
+  \IfBooleanTF{#1}
+    { \csdef{#2}##1##2{%
+        \if@withhyper
+          \IfNoValueTF {##2}
+            {\printinfo{\csuse{#2 symbol}}{##1}}%
+            {\printinfo{\csuse{#2 symbol}}{##1}[##2]}%
+        \else
+          \printinfo{\csuse{#2 symbol}}{##1}%
+        \fi%
+      }%
+    }
+    { \csdef{#2}##1{%
+        \if@withhyper
+          \IfNoValueTF {#4}
+            {\printinfo{\csuse{#2 symbol}}{##1}}%
+            {\printinfo{\csuse{#2 symbol}}{##1}[\csuse{#2 hyperprefix}##1]}%
+        \else
+          \printinfo{\csuse{#2 symbol}}{##1}%
+        \fi%
+      }%
+    }
 }
 \ExplSyntaxOff
 
@@ -199,7 +215,7 @@
     \if@normalphoto
       \includegraphics[width=\linewidth]{#2}
     \else
-      \tikz\path[fill overzoom image={#2}][scale=3][rounded corners=10mm] (0,0)--(0,1)--(1,1)--(1,0)--cycle;
+      \tikz\path[fill overzoom image={#2}][scale=3][rounded corners=2mm] (0,0)--(0,1)--(1,1)--(1,0)--cycle;
     \fi%
   \end{minipage}%
 }
@@ -252,7 +268,7 @@
 \renewenvironment{quote}{\color{accent}\itshape\large}{\par}
 
 \newcommand{\cvsection}[2][]{%
-  \bigskip%
+  \nointerlineskip\bigskip%  %% bugfix in v1.6.2
   \ifstrequal{#1}{}{}{\marginpar{\vspace*{\dimexpr1pt-\baselineskip}\raggedright\input{#1}}}%
   {\color{heading}\cvsectionfont{#2}}\\[-1ex]% %\MakeUppercase
   {\color{headingrule}\rule{\linewidth}{2pt}\par}\medskip
@@ -287,10 +303,17 @@
   \tikz[baseline]\node[anchor=base,draw=body!30,rounded corners,inner xsep=1ex,inner ysep =0.75ex,text height=1.5ex,text depth=.25ex]{#1};
 }
 
+% v1.6: Use accsupp so that the actual numeric value is copied/pasted
+%       and also support 0.5, 1.5, 2.5, 3.5, 4.5
 \newcommand{\cvskill}[2]{%
-\textcolor{emphasis}{\textbf{#1}}\hfill
-\foreach \x in {1,...,5}{%
-  \space{\ifnumgreater{\x}{#2}{\color{body!30}}{\color{accent}}\ratingmarker}}\par%
+  \textcolor{emphasis}{\textbf{#1}}\hfill
+  \BeginAccSupp{method=plain,ActualText={#2}}
+  \foreach \x in {1,...,5}{%
+     \ifdimequal{\x pt - #2 pt}{0.5pt}%
+    {\clipbox*{0pt -0.25ex {.5\width} {\totalheight}}{\color{accent}\ratingmarker}%
+     \clipbox*{{.5\width} -0.25ex {\width} {\totalheight}}{\color{body!30}\ratingmarker}}
+    {\ifdimgreater{\x bp}{#2 bp}{\color{body!30}}{\color{accent}}\ratingmarker}%
+  }\EndAccSupp{}\par%
 }
 
 % Adapted from @Jake's answer at http://tex.stackexchange.com/a/82729/226
@@ -338,7 +361,8 @@
             (-\newcumnum:\innerradius) arc (-\newcumnum:-(\cumnum):\innerradius) -- cycle;
 
             % Draw the data labels
-            \draw  [*-,thin,emphasis] node [append after command={(\midangle:\midradius pt) -- (\midangle:\outerradius + 1ex) -- (\tikzlastnode)}] at (\midangle:\outerradius + 1ex) [xshift=\labelshiftdir*0.5cm,inner sep=1ex, outer sep=0pt, text width=\width,anchor=\textanchor,align=\textalign,font=\small,text=body]{\name};
+            % v1.6: Use accsupp so that the numeric number is copied/pasted too
+            \draw  [*-,thin,emphasis] node [append after command={(\midangle:\midradius pt) -- (\midangle:\outerradius + 1ex) -- (\tikzlastnode)}] at (\midangle:\outerradius + 1ex) [xshift=\labelshiftdir*0.5cm,inner sep=1ex, outer sep=0pt, text width=\width,anchor=\textanchor,align=\textalign,font=\small,text=body]{\BeginAccSupp{method=pdfstringdef,ActualText={\name: \value}}\name\EndAccSupp{}};
             % Set the old cumulated angle to the new value
             \global\let\cumnum=\newcumnum
         }
